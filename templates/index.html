@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css"
+        integrity="sha384-B0vP5xmATw1+K9KRQjQERJvTumQW0nPEzvF6L/Z6nronJ3oUOFUFpCjEUQouq2+l" crossorigin="anonymous">
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery and Bootstrap Bundle (includes Popper) -->
+    <script src="https://code.jquery.com/jquery-latest.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-Piv4xVNRyMGpqkS2by6br4gNJ7DXjqk09RmUpJ8jgGtD7zP9yug3goQfGII0yAns"
+        crossorigin="anonymous"></script>
+    <!-- 카카오맵 api-->
+    <script type="text/javascript"
+        src="//dapi.kakao.com/v2/maps/sdk.js?appkey=eb7111e6861b9a4cfde6eb263dbb5ff7&libraries=services,clusterer,drawing"></script>
+
+    <script>
+        let addrRes = ''
+        let curFeed = {}
+        $(document).ready(function () {
+            // index.html 로드가 완료되면 자동으로 showFeeds() 함수를 호출합니다.
+            showFeeds();
+        });
+        //카드 생성
+        let allNames = []
+        function showFeeds() {
+            //1. .card-columns 의 내부 html 태그를 모두 삭제
+            $('.card-columns').empty()
+            allNames = []
+
+            //2. 서버에 1)GET 방식으로, 2)/api/list 라는 주소로 feed_list를 요청합니다.
+            $.ajax({
+                type: 'GET',
+                url: '/api/list',
+                data: {},
+                success: function (response) {
+                    //3. 서버가 돌려준 feed_list를 feeds라는 변수에 저장합니다.
+                    let feeds = response['feeds_list']
+                    curFeed = feeds
+                    console.log(feeds)
+                    // 4. for 문을 활용하여 feeds 배열의 요소를 차례대로 조회합니다.
+                    if(feeds.length == 0){
+                        $('.left').css('display','none')
+                        return
+                    } else $('.left').css('display','block')
+                    for (let i = 0; i < feeds.length; i++) {
+                        let feed = feeds[i]
+                        // 5. star[i] 요소의 name, url, img_url, recent, like 키 값을 활용하여 값을 조회합니다.
+                        let name = feed['name']
+                        allNames.push(name)
+                        let like = feed['like']
+                        let loca = feed['loca']
+                        let ids = feed['ID']
+                        let comment = feed['Comment']
+                        let comment_len = 0
+                        try{
+                        console.log(id in comment)
+                        }catch{
+                            console.log(234)
+                        }
+                        try {
+                            comment_len = Object.values(comment).length
+                        } catch (error) {
+                            comment_len = 0
+                        }
+                        let is_contain = false
+                        for (let i = 0; i < ids.length; i++) {
+                            if (ids[i] == $('#id').val()) is_contain = true
+                        }
+                        let tempHtml = ''
+                        if (is_contain) {
+                            tempHtml = `
+                            <div class="card" style="width: 18rem;" onmouseenter="clickCardDiv(this)">
+                                <div class="card-body">
+                                    <h5 class="card-title">${name}</h5>
+                                    <p class="card-text">${loca}</p>
+                                    <div style="display: inline-block;">
+                                        <a href="#" class="btn btn-primary" onclick="clickFeedLikeBtn('${name}', '${loca}')">
+                                            좋아요 (${like})
+                                            <img src="/static/heart_img.png" style="width: 25px; height: 25px;">
+                                        </a>
+                                        <a href="#" class="btn btn-${comment_len == 0?'secondary':'primary'}" onclick="clickCommentBtn(this)">
+                                            댓글 (${comment_len})
+                                            <img src="/static/comment_img.png" style="width: 25px; height: 25px;">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            `
+                        } else {
+                            tempHtml = `
+                            <div class="card" style="width: 18rem;" onmouseenter="clickCardDiv(this)">
+                                <div class="card-body">
+                                    <h5 class="card-title">${name}</h5>
+                                    <p class="card-text">${loca}</p>
+                                    <div style="display: inline-block;">
+                                        <a href="#" class="btn btn-secondary" onclick="clickFeedLikeBtn('${name}', '${loca}')">
+                                            좋아요 (${like})
+                                            <img src="/static/heart_img.png" style="width: 25px; height: 25px;">
+                                        </a>
+                                        <a href="#" class="btn btn-${comment_len == 0?'secondary':'primary'}" onclick="clickCommentBtn(this)">
+                                            댓글 (${comment_len})
+                                            <img src="/static/comment_img.png" style="width: 25px; height: 25px;">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            `
+                        }
+                        $('.card-columns').append(tempHtml)
+
+                    }
+                    search_all()
+                }
+            });
+        }
+        function clickCardDiv(e) {
+            console.log($(e).find('.card-title').text())
+            let name = $(e).find('.card-title').text()
+            search_name(name,'inFeed')
+        }
+        function logOut() {
+            window.location.href = '/logOut';
+        }
+        function clickLikeBtn() {
+            let placeName = ''
+            if ($('.search_title').text() == '') {
+                placeName = $('.search_title').val()
+            } else {
+                placeName = $('.search_title').text()
+            }
+            let comment = $('.txtarea').val()
+            
+            $.ajax({
+                type: "POST",
+                url: "/api/like",
+                data: { 'name_give': placeName, 'loca_give': addrRes, 'ID_give': $('#id').val(), 'comment_give': comment },
+                success: function (response) {
+                    if (response['result'] == 'success') {
+                        alert(response['msg']);
+
+                    }
+                    else {
+                        alert(response['msg']);
+                        
+                    }
+                    $('.txtarea').val('')
+                    closeModal()
+                    showFeeds();
+                }
+            });
+
+        }
+        function clickFeedLikeBtn(name, loca) {
+            console.log(name, loca)
+            let comment = ''
+            $.ajax({
+                type: 'POST',
+                url: '/api/like',
+                data: { 'name_give': name, 'loca_give': loca, 'ID_give': $('#id').val(), 'comment_give': comment },
+                success: function (response) {
+                    if (response['result'] == 'success') {
+                        alert(response['msg']);
+
+                    }
+                    else {
+                        alert(response['msg']);
+
+                    }
+                    showFeeds();
+                }
+            });
+        }
+        function clickCommentBtn(e) {
+
+            let name = $(e).parent().parent().find('.card-title').text()
+            let loca = $(e).parent().parent().find('.card-text').text()
+            $.ajax({
+                type: 'POST',
+                url: '/api/comment',
+                data: { 'name_give': name, 'loca_give': loca },
+                success: function (response) {
+                    if (response['result'] == 'success') {
+                        id_list = response['id_list']
+                        comment_list = response['comment_list']
+
+                        $('.comment-modal-text').empty()
+                        $('.comment-modal-title').text(name)
+
+                        for (let i = 0; i < id_list.length; i++) {
+                            let modaltemp = `
+                            <div class="card in-modal-comment" style="width: 18rem;">
+                                <div class="card-body">
+                                    <h5 class="card-title">${id_list[i]}</h5>
+                                    <p class="card-text">${comment_list[i]}</p>
+                                </div>
+                            </div>
+                            `
+                            $('.comment-modal-text').append(modaltemp)
+                        }
+
+                        $('.comment-modal').css('display', 'block')
+                    }
+                    else {
+                        alert('작성된 댓글이 없습니다.')
+                    }
+
+
+                }
+            });
+        }
+        function clickCommentModalCloseBtn() {
+            $('.comment-modal').css('display', 'none')
+        }
+    </script>
+    <meta charset="utf-8" />
+    <title>Jungle foodfeed</title>
+    <style>
+        body {
+            overflow: hidden;
+            height: 100%;
+            width: 100%;
+            scrollbar-color: rgba(141, 141, 141, 0.2);
+        }
+
+        /* ( 크롬, 사파리, 오페라, 엣지 ) 동작 */
+.scroll::-webkit-scrollbar {
+  display: none;
+}
+.scroll {
+  -ms-overflow-style: none; /* 인터넷 익스플로러 */
+  scrollbar-width: none; /* 파이어폭스 */
+}
+        .titleBar{
+            height: 15%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 0.1px solid #8080808a;
+            box-shadow: 0px 2px 5px gray;
+            position: relative;
+            z-index: 5;
+            color: #616161;
+        }
+
+        .wrap {
+            display: flex;
+            flex-direction: row;
+        }
+
+        div.left {
+            background-color: rgba(141, 141, 141, 0.2);
+            z-index: 3;
+            border-right: 1px solid #b8b8b8;
+            height: 100vh;
+            box-shadow: 0px 0px 15px gray;
+        }
+
+        #map {
+            width: 100%;
+            height: 100vh;
+            z-index: 0;
+        }
+
+        .right {
+            z-index: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .search {
+            position: relative;
+            width: 300px;
+        }
+
+        /* 모달 */
+        .modal-content {
+            z-index: 15;
+            border: 0;
+            border-radius: 0;
+        }
+
+        .modal-body {
+            padding-bottom: 10px;
+        }
+
+        .modal-footer:not(.comment_footer) {
+            padding: 0;
+            border-bottom: 0.1px solid black;
+            border-bottom-right-radius: 0;
+            border-bottom-left-radius: 0;
+            border-top: 0;
+            padding-bottom: 5px;
+            padding-right: 12px;
+        }
+
+        /* 피드 */
+        .card:not(.in-modal-comment) {
+            margin: 10px;
+            width: 16rem;
+            box-shadow: 0px 2px 7px gray;
+        }
+
+        #search_name {
+            z-index: 2;
+            margin-right: 10px;
+        }
+
+        .input_search {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: fixed;
+            top: 20px;
+            z-index: 10;
+            padding: 10px;
+            width: 550px;
+            background-color: #a0a0a0a3;
+            ;
+            border-radius: 10px;
+            right: 20px;
+        }
+
+        /* 로그아웃 버튼 */
+        #logoutbtn {
+            margin-left: 10px;
+            z-index: 5;
+        }
+
+        /* 로그아웃 버튼 */
+        #logoutbtn {
+            top: 20px;
+            right: 20px;
+            z-index: 5;
+        }
+
+        .card-columns {
+            columns: 1;
+            overflow-y: scroll;
+            display: flex;
+            flex-direction: column;
+            height: 85%;
+            align-items: center;
+            padding: 10px;
+        }
+
+        .modal-header {
+            padding: 15px;
+        }
+
+        .modal-header:not(.click) {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header>div:not(.click) {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header p {
+            font-size: 0.8em;
+            color: gray;
+            margin-bottom: 0;
+        }
+
+        .txtarea {
+            resize: none;
+        }
+
+        .clickP {
+            margin-top: 10px;
+        }
+
+        .comment-modal-text{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow-y: scroll;
+        }
+
+        .comment-modal-content{
+            border: 1px solid #b8b8b8;
+            border-radius: 20px;
+            width: fit-content;
+        }
+
+        .footerComment{
+            border-bottom: 0px;
+        }
+        /* desktop 규격 */
+        @media screen and (min-width: 1000px) {}
+
+        /* tablet 규격 */
+        @media screen and (max-width: 1000px) {
+            body {
+                background-color: #c4c4c43d;
+            }
+
+            .input_search {
+                position: relative;
+                right: 0;
+                top: 0;
+                background-color: #c4c4c400;
+                margin-bottom: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 사이드바 -->
+    <div class="wrap">
+        <input id="id" hidden value="{{id}}">
+        <!-- 로그아웃 -->
+        <div class="left">
+            <!-- 피드 -->
+            <div class="titleBar">
+                <h2>Jungle</h2>
+                <h2>FoodFeed</h2>
+            </div>
+            <!-- 피드 -->
+            <div class="card-columns">
+                <div class="card" style="width: 18rem;">
+                    <div class="card-body">
+                        <h5 class="card-title">상호명</h5>
+                        <p class="card-text">추가 정보</p>
+                        <div style="display: inline-block;">
+                            <a href="#" class="btn btn-primary">
+                                좋아요
+                                <img src="/static/heart_img.png" style="width: 25px; height: 25px;">
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 댓글 보기 모달창 -->
+        <div class="modal comment-modal" tabindex="-1" style="display: none;">
+            <div class="modal-dialog">
+                <div class="modal-content comment-modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title comment-modal-title"></h5>
+                    </div>
+                    <div class="comment-modal-text">
+                    </div>
+                    <div class="modal-footer comment_footer">
+                        <button type="button" class="btn btn-secondary footerComment" data-dismiss="modal"
+                            onclick="clickCommentModalCloseBtn()">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="right">
+            <!-- 검색창 -->
+            <div class="input-group mb-3 input_search">
+                <input type="text" class="form-control" id="search_name" placeholder="맛집 검색"
+                    aria-label="Recipient's username" aria-describedby="button-addon2">
+                <button class="btn btn-primary " type="button" id="button-addon2"
+                    onclick="search_name($('#search_name').val(),'inMap')">검색</button>
+                    <button id="logoutbtn" type="button" class="btn btn-success" onclick="search_all()">전체 피드 위치 보기</button>
+                    <!-- 로그아웃 -->
+                <button id="logoutbtn" type="button" class="btn btn-danger" onclick="logOut()">로그아웃</button>
+            </div>
+            <div>
+                <!-- 지도 크기 지정-->
+                <div id="map"></div>
+                <!-- api키를 가져온다-->
+                <script>
+                    var infowindow = new kakao.maps.InfoWindow({ zIndex: 1 });
+                    var mapContainer = document.getElementById('map'), // 지도를 표시할 div 
+                        mapOption = {
+                            center: new kakao.maps.LatLng(36.392110, 127.404816), // 지도의 중심좌표
+                            level: 4 // 지도의 확대 레벨
+                        };
+
+                    // 지도를 옵션으로 생성한다. 
+                    var map = new kakao.maps.Map(mapContainer, mapOption); // 지도를 생성합니다
+
+                    // 주소 모듈 임포트
+                    var geocoder = new kakao.maps.services.Geocoder();
+                    // 지도에 표시된 마커 객체를 가지고 있을 배열입니다
+                    var markers = [];
+                    var search_markers = [];
+
+                    function getAdrr(x, y, is_type, place) {
+                        // 좌표를 넣어준다
+                        var coord = new kakao.maps.LatLng(x, y);
+                        // 콜백함수
+                        var callback = function (result, status) {
+                            if (status === kakao.maps.services.Status.OK) {
+                                addrRes = result[0].address.address_name;
+                                if (is_type == 'search') {
+                                    let is_search_contain = false
+                                    for (let i = 0; i < curFeed.length; i++) {
+                                        if (curFeed[i]['name'] == place.place_name && curFeed[i]['loca'] == result[0].address.address_name) is_search_contain = true
+                                    }
+                                    if (is_search_contain) {
+                                        infowindow.setContent(`
+          <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title search_title">${place.place_name}</h5>
+                    <p>주소 : ${result[0].address.address_name}</p>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <textarea class="form-control txtarea" aria-label="With textarea" placeholder="리뷰를 입력해주세요(선택)"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeModal()" type="button" class="btn btn-secondary"
+                    data-bs-dismiss="modal">닫기</button>
+                <button type="button" class="btn btn-primary" id="likeBtn" onclick="clickLikeBtn()">
+                    <img src="/static/heart_img.png" style="width: 25px; height: 25px;">
+
+                </button>
+            </div>
+          </div>
+`)
+                                    } else {
+                                        infowindow.setContent(`
+          <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title search_title">${place.place_name}</h5>
+                    <p>주소 : ${result[0].address.address_name}</p>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <textarea class="form-control txtarea" aria-label="With textarea" placeholder="리뷰를 입력해주세요(선택)"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeModal()" type="button" class="btn btn-secondary"
+                    data-bs-dismiss="modal">닫기</button>
+                <button type="button" class="btn btn-secondary" id="likeBtn" onclick="clickLikeBtn()">
+                    <img src="/static/heart_img.png" style="width: 25px; height: 25px;">
+
+                </button>
+            </div>
+          </div>
+`)
+                                    }
+                                } else {
+                                    let is_click_contain = false
+                                    for (let i = 0; i < curFeed.length; i++) {
+                                        if (curFeed[i]['loca'] == result[0].address.address_name) is_click_contain = true
+                                    }
+                                    if (is_click_contain) {
+                                        infowindow.setContent(`
+          <div class="modal-content">
+            <div class="modal-header">
+                <div class="input-group flex-nowrap click">
+                    <span class="input-group-text" id="addon-wrapping">상호명</span>
+                    <input id="searchInputKeyword" type="text" class="form-control search_title" placeholder="상호명을 입력해주세요"
+                        aria-label="Username" aria-describedby="addon-wrapping" value="${result[0].address.address_name}">
+                </div>
+                <p class="clickP">주소 : ${result[0].address.address_name}</p>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <textarea class="form-control txtarea" aria-label="With textarea" placeholder="리뷰를 입력해주세요(선택)"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeModalAndDel()" type="button" class="btn btn-danger"
+                    data-bs-dismiss="modal">삭제</button>
+                <button onclick="closeModal()" type="button" class="btn btn-secondary"
+                    data-bs-dismiss="modal">닫기</button>
+                <button type="button" class="btn btn-primary" id="likeBtn" onclick="clickLikeBtn()">
+                    <img src="/static/heart_img.png" style="width: 25px; height: 25px;">
+
+                </button>
+            </div>
+          </div>
+`)
+                                    }
+                                    else {
+                                        infowindow.setContent(`
+          <div class="modal-content">
+            <div class="modal-header">
+                <div class="input-group flex-nowrap click">
+                    <span class="input-group-text" id="addon-wrapping">상호명</span>
+                    <input id="searchInputKeyword" type="text" class="form-control search_title" placeholder="상호명을 입력해주세요"
+                        aria-label="Username" aria-describedby="addon-wrapping" value="${result[0].address.address_name}">
+                </div>
+                <p class="clickP">주소 : ${result[0].address.address_name}</p>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <textarea class="form-control txtarea" aria-label="With textarea" placeholder="리뷰를 입력해주세요(선택)"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeModalAndDel()" type="button" class="btn btn-danger"
+                    data-bs-dismiss="modal">삭제</button>
+                <button onclick="closeModal()" type="button" class="btn btn-secondary"
+                    data-bs-dismiss="modal">닫기</button>
+                <button type="button" class="btn btn-secondary" id="likeBtn" onclick="clickLikeBtn()">
+                    <img src="/static/heart_img.png" style="width: 25px; height: 25px;">
+
+                </button>
+            </div>
+          </div>
+`)
+                                    }
+                                }
+
+                            }
+                        };
+                        // 처리 및 출력부
+                        return geocoder.coord2Address(coord.getLng(), coord.getLat(), callback);
+                    }
+
+                    // 좌표를 넣어준다
+                    var coord = new kakao.maps.LatLng(37.56496830314491, 126.93990862062978);
+
+                    var sw = new kakao.maps.LatLng(36.404878, 127.412622), ne = new kakao.maps.LatLng(36.3899, 127.392);
+                    // 검색된 장소 위치를 기준으로 지도 범위를 재설정하기위해
+                    // LatLngBounds 객체에 좌표를 추가합니다
+                    var bounds = new kakao.maps.LatLngBounds(sw, ne);
+                    map.setBounds(bounds);
+
+                    var is_marker = false
+                    // 지도를 클릭했을때 클릭한 위치에 마커를 추가하도록 지도에 클릭이벤트를 등록합니다
+                    kakao.maps.event.addListener(map, 'click', function (mouseEvent) {
+                        infowindow.close();
+                        // 클릭한 위치에 마커를 표시합니다 
+                        if (is_marker) { // 클릭하여 생성된 마커가 없을 때
+                            // 기존 클릭 마커 제거
+                            hideMarkers()
+                        }
+                        displayMarker(mouseEvent.latLng, 'click');
+
+                        is_marker = true
+                    });
+                    //모달 닫기
+                    function closeModal() {
+                        infowindow.close();
+                    }
+                    //모달 닫고 삭제
+                    function closeModalAndDel() {
+                        infowindow.close();
+                        hideMarkers()
+                    }
+
+
+                    let search_count = 0
+                    function search_name(name, type_is) {
+                        // 장소 검색 객체를 생성합니다
+                        var ps = new kakao.maps.services.Places();
+                        unSetMarkers(map)
+                        ps.setMap(map);
+                        // 키워드로 장소를 검색합니다
+                        if (type_is == 'inMap') {
+                            ps.keywordSearch('대전 유성구 전민동' + name, placesSearchCB, useMapBounds = true);
+                            ps.keywordSearch('대전 유성구 문지동' + name, placesSearchCB, useMapBounds = true);
+                        } else {
+                            ps.keywordSearch(name, placesSearchCB, useMapBounds = true);
+                        }
+                        search_count = 0
+                        closeModal()
+                    }
+                    ////
+                    // 키워드 검색 완료 시 호출되는 콜백함수 입니다
+                    function placesSearchCB(data, status, pagination) {
+                        if (status === kakao.maps.services.Status.OK) {
+                            // 데이터 확인
+                            console.log(data);
+                        } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
+                            if (search_count == 0) {
+                                // alert('검색 결과가 존재하지 않습니다.');
+                                search_count++
+                            }
+                            return;
+                        } else if (status === kakao.maps.services.Status.ERROR) {
+                            if (search_count == 0) {
+                                // alert('검색 결과 중 오류가 발생했습니다.');
+                                search_count++
+                            }
+                            return;
+                        }
+                        hideMarkers()
+                        unSetMarkers()
+                        for (var i = 0; i < data.length; i++) {
+                            displayMarker(data[i], 'search');
+                        }
+                        // 검색된 장소 위치를 기준으로 지도 범위를 재설정합니다
+                        map.setBounds(bounds);
+                    }
+
+                    function search_all(name) {
+                        hideMarkers()
+                        // 장소 검색 객체를 생성합니다
+                        var ps = new kakao.maps.services.Places();
+                        unSetMarkers(map)
+                        ps.setMap(map);
+                        // 키워드로 장소를 검색합니다
+                        for(let i = 0; i<allNames.length;i++){
+                            ps.keywordSearch(allNames[i], placesSearchCBAll, useMapBounds = true);   
+                        }
+                        search_count = 0
+                        closeModal()
+                    }
+
+                    function placesSearchCBAll(data, status, pagination) {
+                        if (status === kakao.maps.services.Status.OK) {
+                            // 데이터 확인
+                            console.log(data);
+                        } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
+                            if (search_count == 0) {
+                                // alert('검색 결과가 존재하지 않습니다.');
+                                search_count++
+                            }
+                            return;
+                        } else if (status === kakao.maps.services.Status.ERROR) {
+                            if (search_count == 0) {
+                                // alert('검색 결과 중 오류가 발생했습니다.');
+                                search_count++
+                            }
+                            return;
+                        }
+                        for (var i = 0; i < data.length; i++) {
+                            displayMarker(data[i], 'search');
+                        }
+                        // 검색된 장소 위치를 기준으로 지도 범위를 재설정합니다
+                        map.setBounds(bounds);
+                    }
+
+                    // 지도에 마커를 표시하는 함수입니다
+                    function displayMarker(place, is_type) {
+                        // 마커를 생성하고 지도에 표시합니다
+                        if (is_type == 'search') {
+                            var marker = new kakao.maps.Marker({
+                                map: map,
+                                position: new kakao.maps.LatLng(place.y, place.x)
+                            });
+                            search_markers.push(marker);
+                        } else {
+                            var marker = new kakao.maps.Marker({
+                                position: place,
+                                title: 'clickedMarker',
+                                draggable: true
+                            });
+                            // 마커가 지도 위에 표시되도록 설정합니다
+                            marker.setMap(map);
+                            markers.push(marker);
+                        }
+
+                        // 마커에 클릭이벤트를 등록합니다
+                        kakao.maps.event.addListener(marker, 'click', function () {
+                            //기존에 클릭으로 만들어놓은 마커 제거
+                            // 마커를 클릭하면 장소명이 인포윈도우에 표출됩니다
+                            if (is_type == 'search') {
+                                console.log('search' + place.y, place.x)
+                                hideMarkers()
+                                getAdrr(place.y, place.x, 'search', place)
+
+                            } else {
+                                console.log('click' + place['Ma'], place['La'])
+                                getAdrr(place['Ma'], place['La'], 'click', null)
+                            }
+                            infowindow.open(map, marker);
+                        });
+                    }
+
+
+
+                    // 배열에 추가된 마커들을 지도에 표시하는 함수입니다
+                    function setMarkers(map) {
+                        for (var i = 0; i < markers.length; i++) {
+                            markers[i].setMap(map);
+                        }
+                    }
+
+                    // 배열에 추가된 마커들을 지도에서 삭제하는 함수입니다
+                    function unSetMarkers(map) {
+                        for (var i = 0; i < search_markers.length; i++) {
+                            search_markers[i].setMap(null);
+                        }
+                    }
+
+                    // "마커 보이기" 버튼을 클릭하면 호출되어 배열에 추가된 마커를 지도에 표시하는 함수입니다
+                    function showMarkers() {
+                        setMarkers(map)
+                    }
+
+                    // "마커 감추기" 버튼을 클릭하면 호출되어 배열에 추가된 마커를 지도에서 삭제하는 함수입니다
+                    function hideMarkers() {
+                        setMarkers(null);
+                        markers.pop();
+                    }
+
+                </script>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
