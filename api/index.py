@@ -10,7 +10,7 @@ load_dotenv()
  
 app = Flask("Junge Food Feed")
 client = MongoClient('mongodb://'+os.environ.get('DB_ID')+':'+os.environ.get('DB_PW')+'@'+os.environ.get('DB_IP'), 32)
-print(os.environ.get('TEST'))
+print('asdasda'+str(os.environ.get('TEST')))
 dblog = client.jungle_food_feed #db명
 
 app.config.update(
