@@ -170,5 +170,4 @@ def show_comment():
       return jsonify({'result':'None', 'msg': '등록된 댓글이 없습니다'})
 
 
-if __name__ == '__main__':
-    app.run('0.0.0.0',port=3000,debug=True)
+
