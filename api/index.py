@@ -6,7 +6,6 @@ import random
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
  
 app = Flask("Junge Food Feed")
 client = MongoClient('mongodb://'+os.environ.get('DB_ID')+':'+os.environ.get('DB_PW')+'@'+os.environ.get('DB_IP'), 32)
@@ -23,6 +22,7 @@ app.secret_key = str(random.randrange(1, 100000))
 ## HTML을 주는 부분
 @app.route('/')
 def home():
+   load_dotenv()
    print('asdasda'+str(os.environ.get('TEST')))
    return render_template('login.html')
 
