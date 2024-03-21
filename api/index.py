@@ -3,9 +3,13 @@ from pymongo import MongoClient
 from flask_jwt_extended import *
 from flask_bcrypt import Bcrypt
 import random
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
  
 app = Flask("Junge Food Feed")
-client = MongoClient('mongodb://poqop721:crafter10@13.125.192.91', 27017)
+client = MongoClient('mongodb://'+os.environ.get('DB_ID')+':'+os.environ.get('DB_PW')+'@'+os.environ.get('DB_IP'), 32)
 dblog = client.jungle_food_feed #db명
 
 app.config.update(
