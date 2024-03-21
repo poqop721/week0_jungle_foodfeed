@@ -4,7 +4,7 @@ from flask_jwt_extended import *
 from flask_bcrypt import Bcrypt
 import random
  
-app = Flask(__name__)
+app = Flask("Junge Food Feed")
 client = MongoClient('mongodb://poqop721:crafter10@13.125.192.91', 27017)
 dblog = client.jungle_food_feed #db명
 
@@ -168,6 +168,4 @@ def show_comment():
       return jsonify({'result':'success', 'id_list':id_list, 'comment_list':comment_list})
    else:
       return jsonify({'result':'None', 'msg': '등록된 댓글이 없습니다'})
-
-
 
