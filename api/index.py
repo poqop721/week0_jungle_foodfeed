@@ -8,6 +8,8 @@ import os
 
  
 app = Flask("Junge Food Feed")
+load_dotenv()
+test = 'mongodb://'+os.environ.get('DB_ID')+':'+os.environ.get('DB_PW')+'@'+os.environ.get('DB_IP')
 client = MongoClient('mongodb://'+os.environ.get('DB_ID')+':'+os.environ.get('DB_PW')+'@'+os.environ.get('DB_IP'), 32)
 dblog = client.jungle_food_feed #db명
 
@@ -22,7 +24,9 @@ app.secret_key = str(random.randrange(1, 100000))
 ## HTML을 주는 부분
 @app.route('/')
 def home():
-   load_dotenv()
+   global test
+   print(test)
+   # load_dotenv()
    print('asdasda'+str(os.environ.get('TEST')))
    return render_template('login.html')
 
