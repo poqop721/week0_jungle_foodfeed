@@ -9,7 +9,8 @@ import os
  
 app = Flask("Junge Food Feed")
 load_dotenv()
-client = MongoClient('mongodb://'+os.environ.get('DB_ID')+':'+os.environ.get('DB_PW')+'@'+os.environ.get('DB_IP'), 27017)
+uri = 'mongodb+srv://'+os.environ.get('DB_ID')+':'+os.environ.get('DB_PW')+'@jungle-food-feed.xymkoqz.mongodb.net/?retryWrites=true&w=majority&appName=jungle-food-feed'
+client = MongoClient(uri, 27017)
 dblog = client.jungle_food_feed #db명
 
 app.config.update(
